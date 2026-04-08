@@ -1,27 +1,62 @@
+const fs = require('fs');
+const path = require('path');
 const logger = require('../utils/logger');
 const { User } = require('../storage/models');
-const aiService = require('./ai');
 
 class CommandRouter {
     constructor(whatsappHandler) {
         this.whatsapp = whatsappHandler;
+        this.plugins = new Map();
         this.commands = new Map();
-        this.registerCommands();
+        this.loadPlugins();
     }
 
-    registerCommands() {
-        this.commands.set('menu', this.handleMenu.bind(this));
-        this.commands.set('ai', this.handleAI.bind(this));
-        this.commands.set('ping', this.handlePing.bind(this));
-        this.commands.set('help', this.handleHelp.bind(this));
+    loadPlugins() {
+        const pluginsDir = path.join(__dirname, '../plugins');
+        
+        if (!fs.existsSync(pluginsDir)) {
+            logger.warn('Plugins directory not found');
+            return;
+        }
+
+        const files = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'));
+        
+        for (const file of files) {
+            try {
+                const pluginPath = path.join(pluginsDir, file);
+                delete require.cache[require.resolve(pluginPath)];
+                const plugin = require(pluginPath);
+                
+                if (plugin.commands && Array.isArray(plugin.commands)) {
+                    this.plugins.set(file, plugin);
+                    
+                    plugin.commands.forEach(cmdObj => {
+                        this.commands.set(cmdObj.cmd, {
+                            plugin: file,
+                            role: cmdObj.role || 'public',
+                            execute: plugin.execute
+                        });
+                    });
+                    
+                    if (plugin.init && this.whatsapp.sock) {
+                        plugin.init(this.whatsapp.sock);
+                    }
+                    
+                    logger.info(`Loaded plugin: ${file} (${plugin.commands.length} commands)`);
+                }
+            } catch (error) {
+                logger.error(`Failed to load plugin ${file}:`, error.message);
+            }
+        }
+        
+        logger.info(`Total commands loaded: ${this.commands.size}`);
     }
 
     async execute(command, msg, args) {
         try {
-            const handler = this.commands.get(command);
+            const cmdData = this.commands.get(command);
             
-            if (!handler) {
-                logger.debug(`Unknown command: ${command}`);
+            if (!cmdData) {
                 return;
             }
 
@@ -29,27 +64,27 @@ class CommandRouter {
             const user = await this.getOrCreateUser(userId);
 
             if (user.activity.isBanned) {
-                logger.warn(`Banned user ${userId} attempted command: ${command}`);
+                logger.warn(`Banned user ${userId} attempted: ${command}`);
                 return;
             }
 
             user.stats.commandsUsed += 1;
             user.activity.lastSeen = new Date();
-            await user.save();
+            await user.save().catch(err => logger.error('User save error:', err));
 
-            await handler(msg, args, user);
+            await cmdData.execute(this.whatsapp.sock, msg, args, user, command);
 
         } catch (error) {
-            logger.error(`Command execution error (${command}):`, error);
+            logger.error(`Command error (${command}):`, error.message);
             
             try {
                 await this.whatsapp.sendMessage(
                     msg.key.remoteJid,
-                    { text: '❌ An error occurred while processing your command.' },
+                    { text: `❌ Error: ${error.message}` },
                     { quoted: msg }
                 );
             } catch (sendError) {
-                logger.error('Failed to send error message:', sendError);
+                logger.error('Failed to send error message:', sendError.message);
             }
         }
     }
@@ -60,84 +95,20 @@ class CommandRouter {
             
             if (!user) {
                 user = await User.create({ userId });
-                logger.info(`New user created: ${userId}`);
+                logger.info(`New user: ${userId}`);
             }
 
             return user;
         } catch (error) {
-            logger.error('User fetch/create error:', error);
-            throw error;
+            logger.error('User fetch error:', error.message);
+            return {
+                userId,
+                role: 'user',
+                activity: { isBanned: false },
+                stats: { commandsUsed: 0 },
+                save: async () => {}
+            };
         }
-    }
-
-    async handleMenu(msg) {
-        const menuText = `
-╭━━━『 PAPPY BOT V2 』━━━╮
-│
-│ 🤖 *COMMANDS*
-│ • .menu - Show this menu
-│ • .ai [prompt] - Ask AI
-│ • .ping - Check bot status
-│ • .help - Get help
-│
-╰━━━━━━━━━━━━━━━━━━━╯
-        `.trim();
-
-        await this.whatsapp.sendMessage(
-            msg.key.remoteJid,
-            { text: menuText },
-            { quoted: msg }
-        );
-    }
-
-    async handleAI(msg, args) {
-        if (args.length === 0) {
-            await this.whatsapp.sendMessage(
-                msg.key.remoteJid,
-                { text: '❌ Usage: .ai [your question]' },
-                { quoted: msg }
-            );
-            return;
-        }
-
-        const prompt = args.join(' ');
-        
-        await this.whatsapp.sendMessage(
-            msg.key.remoteJid,
-            { text: '🤖 Thinking...' },
-            { quoted: msg }
-        );
-
-        try {
-            const response = await aiService.generateText(prompt, msg.key.remoteJid);
-            
-            await this.whatsapp.sendMessage(
-                msg.key.remoteJid,
-                { text: `🤖 *AI Response:*\n\n${response}` },
-                { quoted: msg }
-            );
-        } catch (error) {
-            await this.whatsapp.sendMessage(
-                msg.key.remoteJid,
-                { text: '❌ AI service is temporarily unavailable. Please try again later.' },
-                { quoted: msg }
-            );
-        }
-    }
-
-    async handlePing(msg) {
-        const uptime = process.uptime();
-        const memory = (process.memoryUsage().rss / 1024 / 1024).toFixed(0);
-
-        await this.whatsapp.sendMessage(
-            msg.key.remoteJid,
-            { text: `🏓 Pong!\n\n⏱️ Uptime: ${uptime.toFixed(0)}s\n💾 Memory: ${memory}MB` },
-            { quoted: msg }
-        );
-    }
-
-    async handleHelp(msg) {
-        await this.handleMenu(msg);
     }
 }
 

@@ -45,6 +45,7 @@ class PappyBot {
 
         } catch (error) {
             logger.error('❌ Failed to start bot:', error);
+            logger.error('Error details:', { message: error.message, stack: error.stack });
             await this.shutdown();
             process.exit(1);
         }
