@@ -1,5 +1,5 @@
 // plugins/pappy-admin.js — User & Group Management
-const User = require('../core/models/User');
+const User = require('../storage/models').User');
 const userEngine = require('../modules/userEngine');
 
 module.exports = {

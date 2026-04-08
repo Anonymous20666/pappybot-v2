@@ -1,6 +1,6 @@
 // plugins/pappy-groupstatus.js
 const { downloadMediaMessage } = require('gifted-baileys');
-const { broadcastQueue } = require('../core/bullEngine');
+const { broadcastQueue } = require('../services/bullEngine');
 const fs = require('fs');
 const path = require('path');
 

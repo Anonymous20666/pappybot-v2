@@ -1,7 +1,7 @@
 // modules/userEngine.js
-const User = require('../core/models/User');
-const { ownerWhatsAppJids } = require('../config');
-const logger = require('../core/logger');
+const { User } = require('../storage/models');
+const { ownerWhatsAppJids } = require('../../config');
+const logger = require('../services/logger');
 
 class UserEngine {
     constructor() {

@@ -1,5 +1,5 @@
 // core/taskManager.js — PAPPY V3
-const { system } = require('../config');
+const { system } = require('../../config');
 
 class TaskManager {
     constructor() {

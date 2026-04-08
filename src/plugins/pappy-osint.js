@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const logger = require('../core/logger');
+const logger = require('../services/logger');
 
 const INTEL_DB_PATH = path.join(__dirname, '../data/intel.json');
 

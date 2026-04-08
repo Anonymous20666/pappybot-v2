@@ -1,8 +1,8 @@
 // plugins/pappy-ai.js — PAPPY V3 AI ENGINE
-const logger = require('../core/logger');
+const logger = require('../services/logger');
 
 let ai = null;
-try { ai = require('../core/ai'); } catch (e) { logger.warn('[AI] Module offline'); }
+try { ai = require('../services/ai'); } catch (e) { logger.warn('[AI] Module offline'); }
 
 module.exports = {
     category: 'AI',

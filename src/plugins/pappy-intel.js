@@ -1,9 +1,9 @@
 // plugins/pappy-intel.js — OMEGA BEAST AUTO-JOIN ENGINE
 const path = require('path');
 const fs   = require('fs');
-const { ownerTelegramId } = require('../config');
-const logger = require('../core/logger');
-const Intel  = require('../core/models/Intel');
+const { ownerTelegramId } = require('../../config');
+const logger = require('../services/logger');
+const Intel  = require('../storage/models').Intel');
 
 const MAX_PER_DAY  = 500;
 const MIN_DELAY_MS = 8000;

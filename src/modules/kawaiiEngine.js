@@ -4,8 +4,8 @@
  * Minimal Luxury ASCII Formatting with OpenRouter AI Injection
  */
 
-const ai = require('../core/ai');
-const logger = require('../core/logger');
+const ai = require('../services/ai');
+const logger = require('../services/logger');
 
 // Fallback moods in case OpenRouter times out or errors
 const STATIC_MOODS = [

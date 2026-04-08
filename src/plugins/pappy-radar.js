@@ -1,5 +1,5 @@
 // plugins/pappy-radar.js
-const { ownerTelegramId } = require('../config');
+const { ownerTelegramId } = require('../../config');
 
 module.exports = {
     category: 'INTEL',

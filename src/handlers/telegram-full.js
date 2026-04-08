@@ -4,11 +4,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const axios = require('axios');
-const { tgBotToken, ownerTelegramId } = require('../config');
+const { tgBotToken, ownerTelegramId } = require('../../config');
 const { startWhatsApp, activeSockets, botState, saveState } = require('./whatsapp');
 const logger = require('./logger');
 const taskManager = require('./taskManager'); 
-const Intel = require('./models/Intel'); // 👈 NEW: Import our database blueprint
+const Intel = require('../storage/models').Intel; // 👈 NEW: Import our database blueprint
 
 const SESSIONS_PATH = path.join(__dirname, '../data/sessions');
 
@@ -548,7 +548,7 @@ async function startTelegram() {
     bot.command('ban', async (ctx) => {
         const phone = ctx.message.text.split(' ')[1]?.replace(/[^0-9]/g, '');
         if (!phone) return ctx.reply('❌ Usage: <code>/ban 2348123456789</code>', { parse_mode: 'HTML' });
-        const User = require('./models/User');
+        const User = require('../storage/models').User;
         const userEngine = require('../modules/userEngine');
         await User.updateOne({ userId: `${phone}@s.whatsapp.net` }, { 'activity.isBanned': true }, { upsert: true });
         userEngine.cache?.delete(`${phone}@s.whatsapp.net`);
@@ -558,7 +558,7 @@ async function startTelegram() {
     bot.command('unban', async (ctx) => {
         const phone = ctx.message.text.split(' ')[1]?.replace(/[^0-9]/g, '');
         if (!phone) return ctx.reply('❌ Usage: <code>/unban 2348123456789</code>', { parse_mode: 'HTML' });
-        const User = require('./models/User');
+        const User = require('../storage/models').User;
         const userEngine = require('../modules/userEngine');
         await User.updateOne({ userId: `${phone}@s.whatsapp.net` }, { 'activity.isBanned': false });
         userEngine.cache?.delete(`${phone}@s.whatsapp.net`);
@@ -658,7 +658,7 @@ async function startTelegram() {
         const wait = await ctx.reply(`🔄 <b>Joining ${added} group(s)...</b>\nThis may take a while for large batches.`, { parse_mode: 'HTML' });
 
         // Join all pending links immediately without waiting for daemon
-        const Intel = require('./models/Intel');
+        const Intel = require('../storage/models').Intel;
         let success = 0, failed = 0;
 
         const pending = await Intel.find({ status: 'pending' }).limit(added + 10).catch(() => []);
@@ -701,7 +701,7 @@ async function startTelegram() {
 
     // ── /joinall — force drain entire pending queue right now ────────────────
     bot.command('joinall', async (ctx) => {
-        const Intel = require('./models/Intel');
+        const Intel = require('../storage/models').Intel;
         const intelPlugin = require('../plugins/pappy-intel');
         const sock = intelPlugin.getSocket() || [...activeSockets.values()].find(s => s?.user) || global.waSock;
 

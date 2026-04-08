@@ -1,7 +1,7 @@
 // core/ai.js — PAPPY V3 GOD MODE AI
 const axios = require('axios');
 const logger = require('./logger');
-const { ai } = require('../config');
+const { ai } = require('../../config');
 const { getMemory, updateMemory } = require('./ai.memory');
 const { tools } = require('./ai.tools');
 const { AGENTS, detectIntent } = require('./ai.agents');

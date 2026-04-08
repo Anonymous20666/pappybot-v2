@@ -103,7 +103,7 @@ async function startWhatsApp(chatId, phoneNumber, slotId = '1', isRestart = fals
         ['sendMessage', 'groupMetadata', 'groupFetchAllParticipating', 'sendPresenceUpdate'].forEach(wrapSocketMethod);
 
         // ── Pairing ───────────────────────────────────────────────────────────
-        if (!sock.authState.creds.registered) {
+        if (!sock.authState.creds.registered && phoneNumber && phoneNumber !== '0') {
             logger.system(`Initiating pairing for +${phoneNumber}...`);
             let pairRetry = 0;
             const doPair = async () => {
@@ -120,10 +120,9 @@ async function startWhatsApp(chatId, phoneNumber, slotId = '1', isRestart = fals
                     }
                 } catch (e) {
                     logger.error(`Pairing error: ${e.message}`);
-                    if (++pairRetry < 3) setTimeout(doPair, 5000);
-                    else if (global.tgBot) {
+                    if (++pairRetry < 2 && global.tgBot) {
                         global.tgBot.telegram.sendMessage(chatId,
-                            `❌ <b>PAIRING FAILED</b>\n<code>${e.message}</code>`,
+                            `❌ <b>PAIRING FAILED</b>\n${e.message}\n\nEnsure the number is correct.`,
                             { parse_mode: 'HTML' }
                         ).catch(() => {});
                     }

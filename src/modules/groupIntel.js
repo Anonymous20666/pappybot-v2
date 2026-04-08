@@ -1,5 +1,5 @@
-const { escapeHTML } = require('../core/sanitizer');
-const logger = require('../core/logger');
+const { escapeHTML } = require('../services/sanitizer');
+const logger = require('../services/logger');
 
 async function getGroupIntelReport(sock) {
     try {

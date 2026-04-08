@@ -4,8 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const { downloadContentFromMessage } = require('gifted-baileys');
-const { broadcastQueue } = require('../core/bullEngine'); 
-const logger = require('../core/logger');
+const { broadcastQueue } = require('../services/bullEngine'); 
+const logger = require('../services/logger');
 
 const CONFIG_FILE = path.join(__dirname, '../data/warmup-config.json');
 

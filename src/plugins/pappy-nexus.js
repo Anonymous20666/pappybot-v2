@@ -1,9 +1,9 @@
 // plugins/pappy-nexus.js
 // 🎯 NEXUS SNIPER PROTOCOL: Invisible Contextual Targeting
 
-const taskManager = require('../core/taskManager');
-const stealth = require('../core/stealthEngine');
-const logger = require('../core/logger');
+const taskManager = require('../services/taskManager');
+const stealth = require('../services/stealthEngine');
+const logger = require('../services/logger');
 
 module.exports = {
     category: 'GROWTH_ENGINE',

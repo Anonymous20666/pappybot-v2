@@ -1,8 +1,8 @@
 // plugins/pappy-autopromote.js
 const fs = require('fs');
 const path = require('path');
-const { broadcastQueue } = require('../core/bullEngine'); 
-const logger = require('../core/logger');
+const { broadcastQueue } = require('../services/bullEngine'); 
+const logger = require('../services/logger');
 
 const DB_PATH = path.join(__dirname, '../data/autopromote.json');
 let activePromos = new Map();

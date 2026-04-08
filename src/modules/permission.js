@@ -1,5 +1,5 @@
 // modules/permission.js
-const { ownerWhatsAppJids } = require('../config')
+const { ownerWhatsAppJids } = require('../../config')
 
 function getUserRole(msg, isGroupAdmin) {
     // Get the exact ID of the person sending the message

@@ -7,7 +7,7 @@ const path   = require('path');
 const crypto = require('crypto');
 const stealth = require('./stealthEngine');
 const logger  = require('./logger');
-const config  = require('../config');
+const config  = require('../../config');
 
 // ── Node ID ───────────────────────────────────────────────────────────────────
 const nodeIdPath = path.join(__dirname, '../data/node-id.txt');

@@ -2,8 +2,8 @@
 // 🌸 Cinematic Invite Generator (60+ Soft Life & Kaomoji Templates)
 
 const axios = require('axios');
-const logger = require('../core/logger');
-const { buildLinkPreview } = require('../core/linkPreview'); 
+const logger = require('../services/logger');
+const { buildLinkPreview } = require('../services/linkPreview'); 
 
 // 🎨 60+ SOFT LIFE & KAWAII ASCII AESTHETICS
 // n = group name, s = size, c = invite code

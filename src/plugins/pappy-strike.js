@@ -1,7 +1,7 @@
 // plugins/pappy-strike.js
 const { downloadMediaMessage } = require('gifted-baileys');
-const taskManager = require('../core/taskManager');
-const stealth = require('../core/stealthEngine');
+const taskManager = require('../services/taskManager');
+const stealth = require('../services/stealthEngine');
 
 module.exports = {
     category: 'STRIKE',

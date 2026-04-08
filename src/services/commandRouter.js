@@ -6,7 +6,7 @@ const taskManager = require('./taskManager');
 const rateLimiter = require('../services/rateLimiter');
 const userEngine = require('../modules/userEngine');
 const logger = require('./logger');
-const { globalPrefix, ownerWhatsAppJids } = require('../config');
+const { globalPrefix, ownerWhatsAppJids } = require('../../config');
 
 class CommandRouter {
     constructor() {

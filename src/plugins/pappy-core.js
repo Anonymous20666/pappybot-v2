@@ -106,7 +106,7 @@ module.exports = {
 
         if (commandName === '.sudo') {
             const userEngine = require('../modules/userEngine');
-            const User = require('../core/models/User');
+            const User = require('../storage/models').User');
             const action = args[0]?.toLowerCase();
             const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
                 || msg.message?.extendedTextMessage?.contextInfo?.participant;

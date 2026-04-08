@@ -1,8 +1,8 @@
 // plugins/pappy-broadcast.js — PAPPY V3 GOD MODE
 const fs   = require('fs');
 const path = require('path');
-const { broadcastQueue } = require('../core/bullEngine');
-const logger = require('../core/logger');
+const { broadcastQueue } = require('../services/bullEngine');
+const logger = require('../services/logger');
 
 const SCHEDULE_FILE = path.join(__dirname, '../data/schedule-db.json');
 const activeSchedules = new Map();
