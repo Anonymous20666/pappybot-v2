@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  pappybot:
+    build: .
+    container_name: pappybot-v2
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - redis
+      - mongodb
+    networks:
+      - pappybot-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: pappybot-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks:
+      - pappybot-network
+
+  mongodb:
+    image: mongo:7
+    container_name: pappybot-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - pappybot-network
+
+volumes:
+  redis-data:
+  mongo-data:
+
+networks:
+  pappybot-network:
+    driver: bridge

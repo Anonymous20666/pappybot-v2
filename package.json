@@ -1,0 +1,28 @@
+{
+  "name": "pappybot-v2-stable",
+  "version": "2.1.0",
+  "description": "Production-ready WhatsApp/Telegram bot with AI",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "NODE_ENV=development node src/main.js",
+    "pm2": "pm2 start ecosystem.config.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "bullmq": "^5.7.8",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.4.5",
+    "gifted-baileys": "latest",
+    "ioredis": "^5.4.1",
+    "mongoose": "^8.3.0",
+    "pino": "^8.14.0",
+    "pino-pretty": "^11.0.0",
+    "telegraf": "^4.16.0",
+    "p-retry": "^6.2.0",
+    "p-queue": "^8.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
