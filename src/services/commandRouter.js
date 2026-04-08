@@ -1,115 +1,83 @@
+// core/commandRouter.js — PAPPY V3
 const fs = require('fs');
 const path = require('path');
-const logger = require('../utils/logger');
-const { User } = require('../storage/models');
+const eventBus = require('./eventBus');
+const taskManager = require('./taskManager');
+const rateLimiter = require('../services/rateLimiter');
+const userEngine = require('../modules/userEngine');
+const logger = require('./logger');
+const { globalPrefix, ownerWhatsAppJids } = require('../config');
 
 class CommandRouter {
-    constructor(whatsappHandler) {
-        this.whatsapp = whatsappHandler;
-        this.plugins = new Map();
-        this.commands = new Map();
+    constructor() {
+        this.plugins = new Map();       // cmd → plugin
+        this.cmdRoles = new Map();      // cmd → role (fast lookup)
         this.loadPlugins();
+        this.initBus();
     }
 
     loadPlugins() {
-        const pluginsDir = path.join(__dirname, '../plugins');
-        
-        if (!fs.existsSync(pluginsDir)) {
-            logger.warn('Plugins directory not found');
-            return;
-        }
-
-        const files = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'));
-        
+        const dir = path.join(__dirname, '../plugins');
+        if (!fs.existsSync(dir)) return;
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.js'));
         for (const file of files) {
             try {
-                const pluginPath = path.join(pluginsDir, file);
-                delete require.cache[require.resolve(pluginPath)];
-                const plugin = require(pluginPath);
-                
-                if (plugin.commands && Array.isArray(plugin.commands)) {
-                    this.plugins.set(file, plugin);
-                    
-                    plugin.commands.forEach(cmdObj => {
-                        this.commands.set(cmdObj.cmd, {
-                            plugin: file,
-                            role: cmdObj.role || 'public',
-                            execute: plugin.execute
-                        });
+                const plugin = require(path.join(dir, file));
+                if (plugin.init) eventBus.on('system.boot', (sock) => plugin.init(sock));
+                if (plugin.commands) {
+                    plugin.commands.forEach(cmd => {
+                        this.plugins.set(cmd.cmd, plugin);
+                        this.cmdRoles.set(cmd.cmd, cmd.role || 'public');
                     });
-                    
-                    if (plugin.init && this.whatsapp.sock) {
-                        plugin.init(this.whatsapp.sock);
-                    }
-                    
-                    logger.info(`Loaded plugin: ${file} (${plugin.commands.length} commands)`);
                 }
-            } catch (error) {
-                logger.error(`Failed to load plugin ${file}:`, error.message);
-            }
+            } catch (err) { logger.error(`Failed to load plugin: ${file}`, err.message); }
         }
-        
-        logger.info(`Total commands loaded: ${this.commands.size}`);
+        logger.success(`✅ Loaded ${this.plugins.size} commands from ${files.length} plugins`);
     }
 
-    async execute(command, msg, args) {
-        try {
-            const cmdData = this.commands.get(command);
-            
-            if (!cmdData) {
-                return;
-            }
+    initBus() {
+        eventBus.on('message.upsert', async ({ sock, msg, text, isGroup, sender, botId, isGroupAdmin }) => {
+            // Fast path — ignore non-commands immediately
+            if (!text || !text.startsWith(globalPrefix)) return;
 
-            const userId = msg.key.remoteJid;
-            const user = await this.getOrCreateUser(userId);
+            const args = text.slice(globalPrefix.length).trim().split(/ +/);
+            const commandName = `.${args.shift().toLowerCase()}`;
 
-            if (user.activity.isBanned) {
-                logger.warn(`Banned user ${userId} attempted: ${command}`);
-                return;
-            }
+            const plugin = this.plugins.get(commandName);
+            if (!plugin) return;
 
-            user.stats.commandsUsed += 1;
-            user.activity.lastSeen = new Date();
-            await user.save().catch(err => logger.error('User save error:', err));
+            const requiredRole = this.cmdRoles.get(commandName);
 
-            await cmdData.execute(this.whatsapp.sock, msg, args, user, command);
+            // Fast owner check from config — no DB needed
+            const isOwner = ownerWhatsAppJids && ownerWhatsAppJids.includes(sender);
 
-        } catch (error) {
-            logger.error(`Command error (${command}):`, error.message);
-            
-            try {
-                await this.whatsapp.sendMessage(
-                    msg.key.remoteJid,
-                    { text: `❌ Error: ${error.message}` },
-                    { quoted: msg }
-                );
-            } catch (sendError) {
-                logger.error('Failed to send error message:', sendError.message);
-            }
-        }
-    }
+            // Quick role gate — owner > admin > public
+            if (requiredRole === 'owner' && !isOwner) return;
+            if (requiredRole === 'admin' && !isOwner && !isGroupAdmin) return;
 
-    async getOrCreateUser(userId) {
-        try {
-            let user = await User.findOne({ userId });
-            
-            if (!user) {
-                user = await User.create({ userId });
-                logger.info(`New user: ${userId}`);
-            }
+            // Rate limit check
+            const groupId = isGroup ? msg.key.remoteJid : null;
+            if (!(await rateLimiter.check(sender, groupId))) return;
 
-            return user;
-        } catch (error) {
-            logger.error('User fetch error:', error.message);
-            return {
-                userId,
-                role: 'user',
-                activity: { isBanned: false },
-                stats: { commandsUsed: 0 },
-                save: async () => {}
-            };
-        }
+            // Get user profile (cached — rarely hits DB)
+            const userProfile = await userEngine.getOrCreate(sender, msg.pushName, isGroupAdmin);
+            if (userProfile.activity?.isBanned) return;
+
+            // Admin role gate
+            if (requiredRole === 'owner' && userProfile.role !== 'owner') return;
+
+            // Fire and forget — unique task ID prevents duplicate execution
+            const taskId = `CMD_${commandName}_${sender}_${msg.key.id}`;
+            taskManager.submit(taskId, async (abortSignal) => {
+                await plugin.execute(sock, msg, args, userProfile, commandName, abortSignal);
+            }, { priority: 5, timeout: 60000 }).catch(err => {
+                if (err.name !== 'AbortError') logger.error(`Error in ${commandName}: ${err.message}`);
+            });
+
+            // Record command usage async — never blocks
+            userEngine.recordCommand(sender).catch(() => {});
+        });
     }
 }
 
-module.exports = CommandRouter;
+module.exports = new CommandRouter();
